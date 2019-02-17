@@ -1,67 +1,86 @@
 #!/usr/bin/env python
 
-# copy LAMMPS src/libliggghts.so and liggghts.py to system dirs
+# copy liggghts src/libliggghts.so and liggghts.py to system dirs
+
+from __future__ import print_function
 
 instructions = """
-Syntax: python install.py [-h] [libdir] [pydir]
-        libdir = target dir for src/libliggghts.so, default = /usr/local/lib
-        pydir = target dir for liggghts.py, default = Python site-packages dir
+Syntax: python install.py [-h] [pydir]
+        pydir = target dir for liggghts.py and libliggghts.so
+                default = Python site-packages dir
 """
 
-import sys,os,commands
+import sys,os,shutil
 
-if (len(sys.argv) > 1 and sys.argv[1] == "-h") or len(sys.argv) > 3:
-  print instructions
+if (len(sys.argv) > 1 and sys.argv[1] == "-h") or len(sys.argv) > 2:
+  print(instructions)
   sys.exit()
 
-if len(sys.argv) >= 2: libdir = sys.argv[1]
-else: libdir = "/usr/local/lib"
-
-if len(sys.argv) == 3: pydir = sys.argv[2]
+if len(sys.argv) == 2: pydir = sys.argv[1]
 else: pydir = ""
-
-# copy C lib to libdir if it exists
-# warn if not in LD_LIBRARY_PATH or LD_LIBRARY_PATH is undefined
-
-if not os.path.isdir(libdir):
-  print "ERROR: libdir %s does not exist" % libdir
-  sys.exit()
-  
-if "LD_LIBRARY_PATH" not in os.environ:
-  print "WARNING: LD_LIBRARY_PATH undefined, cannot check libdir %s" % libdir
-else:
-  libpaths = os.environ['LD_LIBRARY_PATH'].split(':')
-  if libdir not in libpaths:
-    print "WARNING: libdir %s not in LD_LIBRARY_PATH" % libdir
-
-str = "cp ../src/libliggghts.so %s" % libdir
-print str
-outstr = commands.getoutput(str)
-if len(outstr.strip()): print outstr
 
 # copy liggghts.py to pydir if it exists
 # if pydir not specified, install in site-packages via distutils setup()
 
 if pydir:
   if not os.path.isdir(pydir):
-    print "ERROR: pydir %s does not exist" % pydir
+    print( "ERROR: pydir %s does not exist" % pydir)
     sys.exit()
   str = "cp ../python/liggghts.py %s" % pydir
-  print str
-  outstr = commands.getoutput(str)
-  if len(outstr.strip()): print outstr
+  print(str)
+  try:
+    shutil.copyfile("../python/liggghts.py", os.path.join(pydir,'liggghts.py') )
+  except shutil.Error:
+    pass # source and destination are identical
+
+  str = "cp ../src/libliggghts.so %s" % pydir
+  print(str)
+  try:
+     shutil.copyfile("../src/libliggghts.so", os.path.join(pydir,"libliggghts.so") )
+  except shutil.Error:
+    pass # source and destination are identical
   sys.exit()
-  
-print "installing liggghts.py in Python site-packages dir"
+
+print("installing liggghts.py in Python site-packages dir")
 
 os.chdir('../python')                # in case invoked via make in src dir
 
+# extract version string from header
+fp = open('../src/version.h','r')
+txt=fp.read().split('"')[1].split()
+verstr=txt[0]+txt[1]+txt[2]
+fp.close()
+
 from distutils.core import setup
-sys.argv = ["setup.py","install"]    # as if had run "python setup.py install"
-setup(name = "liggghts",
-      version = "3.8.0",
-      author = "Christoph Kloss",
-      author_email = "office@dcs-computing.com",
-      url = "http://www.cfdem.com",
-      description = "LIGGGHTS - LAMMPS improved for general granular and granular heat transfer simulations",
-      py_modules = ["liggghts"])
+from distutils.sysconfig import get_python_lib
+import site
+tryuser=False
+
+try:
+  sys.argv = ["setup.py","install"]    # as if had run "python setup.py install"
+  setup(name = "liggghts",
+        version = verstr,
+        author = "Steve Plimpton",
+        author_email = "sjplimp@sandia.gov",
+        url = "http://liggghts.sandia.gov",
+        description = "liggghts molecular dynamics library",
+        py_modules = ["liggghts"],
+        data_files = [(get_python_lib(), ["../src/libliggghts.so"])])
+except:
+  tryuser=True
+  print ("Installation into global site-packages dir failed.\nTrying user site dir %s now." % site.USER_SITE)
+
+
+if tryuser:
+  try:
+    sys.argv = ["setup.py","install","--user"]    # as if had run "python setup.py install --user"
+    setup(name = "liggghts",
+    version = verstr,
+    author = "Steve Plimpton",
+    author_email = "sjplimp@sandia.gov",
+    url = "http://liggghts.sandia.gov",
+    description = "liggghts molecular dynamics library",
+    py_modules = ["liggghts"],
+    data_files = [(site.USER_SITE, ["../src/libliggghts.so"])])
+  except:
+    print("Installation into user site package dir failed.\nGo to ../python and install manually.")
