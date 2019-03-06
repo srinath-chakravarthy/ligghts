@@ -1390,6 +1390,16 @@ void lammps_scatter_atoms_subset(void *ptr, char *name,
   END_CAPTURE
 }
 
+// ----------------------------------------------------------------------
+// library API functions for accessing LAMMPS configuration
+// ----------------------------------------------------------------------
+
+
+int lammps_config_has_exceptions() {
+  return Info::has_exceptions();
+}
+
+
 
 // ----------------------------------------------------------------------
 // library API functions for error handling

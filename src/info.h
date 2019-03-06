@@ -64,6 +64,9 @@ class Info : protected Pointers {
   bool is_active(const char *, const char *);
   bool is_defined(const char *, const char *);
   bool is_available(const char *, const char *);
+
+  static bool has_exceptions();
+
 };
 
 }

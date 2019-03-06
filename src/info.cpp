@@ -719,3 +719,11 @@ bool Info::is_defined(const char *category, const char *name)
 
   return false;
 }
+
+bool Info::has_exceptions() {
+#ifdef LAMMPS_EXCEPTIONS
+  return true;
+#else
+  return false;
+#endif
+}

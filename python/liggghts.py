@@ -525,6 +525,10 @@ class liggghts(object):
     if name: name = name.encode()
     self.lib.lammps_scatter_atoms_subset(self.lmp,name,type,count,ndata,ids,data)
 
+  @property
+  def has_exceptions(self):
+    """ Return whether the LAMMPS shared library was compiled with C++ exceptions handling enabled """
+    return self.lib.lammps_config_has_exceptions() != 0
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -756,9 +760,9 @@ class PyLiggghts(object):
 
   def __init__(self,name="",cmdargs=None,ptr=None,comm=None):
     if ptr:
-      if isinstance(ptr,PyLammps):
+      if isinstance(ptr,PyLggghts):
         self.lmp = ptr.lmp
-      elif isinstance(ptr,lammps):
+      elif isinstance(ptr,liggghts):
         self.lmp = ptr
       else:
         self.lmp = liggghts(name=name,cmdargs=cmdargs,ptr=ptr,comm=comm)
@@ -1014,7 +1018,7 @@ class IPyLiggghts(PyLiggghts):
   """
 
   def __init__(self,name="",cmdargs=None,ptr=None,comm=None):
-    super(IPyLammps, self).__init__(name=name,cmdargs=cmdargs,ptr=ptr,comm=comm)
+    super(IPyLiggghts, self).__init__(name=name,cmdargs=cmdargs,ptr=ptr,comm=comm)
 
   def image(self, filename="snapshot.png", group="all", color="type", diameter="type",
             size=None, view=None, center=None, up=None, zoom=1.0):
