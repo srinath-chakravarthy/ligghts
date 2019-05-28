@@ -62,6 +62,7 @@ namespace LAMMPS_NS {
 class Input : protected Pointers {
 
  friend class Info;
+ friend class Error;
  friend class LAMMPS;
 
  public:
