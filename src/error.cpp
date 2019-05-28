@@ -20,6 +20,9 @@
 #include "update.h"
 #include "output.h"
 #include "input.h"
+#include "fix.h"
+#include "compute.h"
+#include "force.h"
 
 using namespace LAMMPS_NS;
 
@@ -185,10 +188,23 @@ void Error::fix_error(const char *file, int line, Fix *fix, const char *fixstyle
   if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
+  #ifdef LAMMPS_EXCEPTIONS
 
-  if (universe->nworlds > 1) MPI_Abort(universe->uworld,1);
-  MPI_Finalize();
-  exit(1);
+  // allow commands if an exception was caught in a run
+  // update may be NULL when catching command line errors
+
+  if (update) update->whichflag = 0;
+
+  char msg[300];
+    snprintf(msg, 100, "ERROR: Illegal fix %s (id %s) command (%s:%d)\n", fixstylestr, fix->id, truncpath(file), line);
+    throw LAMMPSAbortException(msg, universe->uworld);
+  #else
+    if (universe->nworlds > 1) MPI_Abort(universe->uworld,1);
+    MPI_Finalize();
+    exit(1);
+  #endif
+  
+
 }
 
 void Error::compute_error(const char *file, int line, Compute *compute,const char *str)
@@ -223,9 +239,22 @@ void Error::compute_error(const char *file, int line, Compute *compute,const cha
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
-  if (universe->nworlds > 1) MPI_Abort(universe->uworld,1);
-  MPI_Finalize();
-  exit(1);
+#ifdef LAMMPS_EXCEPTIONS
+
+  // allow commands if an exception was caught in a run
+  // update may be NULL when catching command line errors
+
+  if (update) update->whichflag = 0;
+
+  char msg[300];
+    snprintf(msg, 100, "ERROR: Illegal fix %s (id %s) command (%s:%d)\n", compute->style, compute->id, truncpath(file), line);
+    throw LAMMPSAbortException(msg, universe->uworld);
+  #else
+    if (universe->nworlds > 1) MPI_Abort(universe->uworld,1);
+    MPI_Finalize();
+    exit(1);
+  #endif
+  
 }
 
 /* ----------------------------------------------------------------------
@@ -360,6 +389,26 @@ void Error::warning(const char *file, int line, const char *str, int logflag)
   if (logflag && logfile) fprintf(logfile,"WARNING: %s (%s:%d)\n",
                                   str,truncpath(file),line);
 }
+
+/* ----------------------------------------------------------------------
+   called by all proc in world
+   only write to screen if non-NULL on this proc since could be file
+------------------------------------------------------------------------- */
+
+void Error::warningAll(const char *file, int line, const char *str, int logflag)
+{
+  MPI_Barrier(world);
+
+  int me;
+  MPI_Comm_rank(world,&me);
+
+  if (me == 0) {
+    if (screen) fprintf(screen,"WARNING: %s (%s:%d)\n",str,file,line);
+    if (logflag && logfile) fprintf(logfile,"WARNING: %s (%s:%d)\n",
+                                  str,file,line);
+  }
+}
+
 
 /* ----------------------------------------------------------------------
    called by one proc in world, typically proc 0

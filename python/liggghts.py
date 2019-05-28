@@ -799,7 +799,7 @@ class PyLiggghts(object):
   def run(self, *args, **kwargs):
     output = self.__getattr__('run')(*args, **kwargs)
 
-    if(lammps.has_mpi4py):
+    if(liggghts.has_mpi4py):
       output = self.lmp.comm.bcast(output, root=0) 
     
     self.runs += get_thermo_data(output)
